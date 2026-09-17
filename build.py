@@ -10,6 +10,7 @@ import os, json, datetime, html as H
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://antoniofreeze.github.io/sogepa"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
+VERSIONE = "3"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()
 
 AZIENDA = {
@@ -354,6 +355,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
 <title>{e(titolo)}</title>
 <meta name="description" content="{e(descrizione)}">
 <link rel="canonical" href="{canon}">
@@ -371,7 +373,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/stile.css">
+<link rel="stylesheet" href="assets/css/stile.css?v={VERSIONE}">
 <script>window.SOGEPA={cfg};</script>
 {ld}
 </head>
@@ -382,7 +384,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 </main>
 {pie()}
 {modale() if con_modale else ""}
-<script src="assets/js/sito.js" defer></script>
+<script src="assets/js/sito.js?v={VERSIONE}" defer></script>
 </body>
 </html>'''
 
