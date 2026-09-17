@@ -9,6 +9,8 @@
   var WA = CFG.whatsapp || '393929957941';
   var EMAIL = CFG.email || 'sogepasnc@libero.it';
   var ENDPOINT = CFG.endpoint || ('https://formsubmit.co/ajax/' + EMAIL);
+  var INTRO = CFG.introWa || 'Ciao So.Ge.Pa., vorrei';
+  function pixel(evento) { if (typeof window.fbq === 'function') { try { window.fbq('track', evento); } catch (e) {} } }
 
   /* Dispositivo: da telefono/tablet si va su WhatsApp, da PC si apre il modulo */
   var mobile = (function () {
@@ -21,8 +23,8 @@
 
   function linkWhatsApp(servizio) {
     var testo = servizio
-      ? 'Ciao So.Ge.Pa., vorrei informazioni e un preventivo per: ' + servizio + '.'
-      : 'Ciao So.Ge.Pa., vorrei richiedere un preventivo.';
+      ? INTRO + ' informazioni e un preventivo per: ' + servizio + '.'
+      : INTRO + ' richiedere un preventivo.';
     return 'https://wa.me/' + WA + '?text=' + encodeURIComponent(testo);
   }
 
@@ -31,6 +33,17 @@
     a.setAttribute('href', linkWhatsApp(a.getAttribute('data-servizio') || ''));
     a.setAttribute('target', '_blank');
     a.setAttribute('rel', 'noopener');
+    a.addEventListener('click', function () { pixel('Contact'); });
+  });
+
+  /* Origine della richiesta (UTM delle campagne) nel campo nascosto "origine" */
+  var params = new URLSearchParams(location.search);
+  var utm = [];
+  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) {
+    if (params.get(k)) utm.push(k.replace('utm_', '') + '=' + params.get(k));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="origine"]'), function (i) {
+    if (utm.length) i.value = (i.value || 'Sito') + ' · ' + utm.join(' ');
   });
 
   /* Modulo: preselezione servizio, apertura modale o scroll al modulo in pagina */
@@ -73,6 +86,7 @@
       var tm = el.getAttribute('data-testo-mobile');
       var span = el.querySelector('.testo');
       if (tm && span) span.textContent = tm;
+      el.addEventListener('click', function () { pixel('Contact'); });
     } else {
       el.setAttribute('href', el.getAttribute('data-href') || '#richiesta');
       el.addEventListener('click', function (e) {
@@ -94,7 +108,7 @@
       var fd = new FormData(form);
       var dati = {};
       fd.forEach(function (v, k) { if (k !== '_honey' && k !== '_next') dati[k] = v; });
-      var soggetto = 'Richiesta dal sito: ' + (dati.servizio || 'informazioni') + ' - ' + (dati.nome || '') + ' ' + (dati.cognome || '');
+      var soggetto = (dati.origine ? '[Ads] ' : '') + 'Richiesta dal sito: ' + (dati.servizio || 'informazioni') + ' - ' + (dati.nome || '') + ' ' + (dati.cognome || '');
       dati._subject = soggetto;
       dati._template = 'table';
       dati._captcha = 'false';
@@ -115,6 +129,7 @@
           esito.className = 'esito ok';
           esito.innerHTML = '<strong>Richiesta inviata, grazie.</strong> Ti ricontattiamo al più presto per il sopralluogo gratuito. Se hai urgenza chiama il <a href="tel:+39095525642">095 525642</a>.';
           esito.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          pixel('Lead');
         } else {
           throw new Error(res.j && res.j.message ? res.j.message : 'Invio non riuscito');
         }

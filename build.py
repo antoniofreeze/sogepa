@@ -10,7 +10,7 @@ import os, json, datetime, html as H
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://antoniofreeze.github.io/sogepa"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
-VERSIONE = "3"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
+VERSIONE = "4"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()
 
 AZIENDA = {
@@ -274,13 +274,14 @@ def opzioni_servizi():
     out.append('<option value="Altro / non so ancora">Altro / non so ancora</option>')
     return "".join(out)
 
-def modulo(prefisso="m", in_pagina=False):
+def modulo(prefisso="m", in_pagina=False, origine=None):
     p = prefisso
     return f'''
 <form class="richiesta" action="{ACTION_MODULO}" method="POST" novalidate="" aria-labelledby="{p}-titolo">
   <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
   <input type="hidden" name="_next" value="{BASE}/grazie.html">
   <input type="hidden" name="_subject" value="Richiesta dal sito So.Ge.Pa.">
+  {f'<input type="hidden" name="origine" value="{e(origine)}">' if origine else ""}
   <div class="campi">
     <div class="campo"><label for="{p}-nome">Nome *</label><input id="{p}-nome" name="nome" required autocomplete="given-name"></div>
     <div class="campo"><label for="{p}-cognome">Cognome *</label><input id="{p}-cognome" name="cognome" required autocomplete="family-name"></div>
@@ -346,10 +347,15 @@ def sezione_recensioni():
   </div>
 </section>'''
 
-def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, og_img="assets/img/hero-home-1600.jpg", tipo="website"):
+def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, og_img="assets/img/hero-home-1600.jpg", tipo="website", noindex=False, nudo=False, intro_wa=None):
     canon = f"{BASE}/" if pagina == "index.html" else f"{BASE}/{pagina}"
     ld = f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>' if jsonld else ""
-    cfg = json.dumps({"whatsapp": AZIENDA["whatsapp"], "email": AZIENDA["email"], "endpoint": ENDPOINT_MODULO})
+    cfg_d = {"whatsapp": AZIENDA["whatsapp"], "email": AZIENDA["email"], "endpoint": ENDPOINT_MODULO}
+    if intro_wa: cfg_d["introWa"] = intro_wa
+    cfg = json.dumps(cfg_d, ensure_ascii=False)
+    robots = '<meta name="robots" content="noindex, nofollow">' if noindex else ""
+    testa = '<a class="skip" href="#contenuto">Vai al contenuto</a>' if nudo else testata(pagina)
+    piede = "" if nudo else pie()
     return f'''<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -360,6 +366,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 <meta name="description" content="{e(descrizione)}">
 <link rel="canonical" href="{canon}">
 <meta name="theme-color" content="#125C4D">
+{robots}
 <meta property="og:type" content="{tipo}">
 <meta property="og:locale" content="it_IT">
 <meta property="og:site_name" content="So.Ge.Pa. Facility Management">
@@ -378,11 +385,11 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 {ld}
 </head>
 <body>
-{testata(pagina)}
+{testa}
 <main id="contenuto">
 {corpo}
 </main>
-{pie()}
+{piede}
 {modale() if con_modale else ""}
 <script src="assets/js/sito.js?v={VERSIONE}" defer></script>
 </body>
@@ -779,6 +786,94 @@ def pagina_404():
 </div></section>'''
     return documento("404.html", "Pagina non trovata | So.Ge.Pa.", "La pagina richiesta non esiste.", corpo, con_modale=False)
 
+
+def pagina_landing():
+    """Landing per le campagne ads: non linkata dal sito, noindex, fuori dalla sitemap."""
+    colonne = ""
+    for c in CATEGORIE:
+        pillole = "".join(f'<a class="pillola" href="#richiesta" data-cta data-servizio="{e(n)}">{ico("check")}{e(n)}</a>' for n, _, _ in c["servizi"])
+        colonne += f'<div class="scelta-col reveal">{"<h3>"}{hexicon(c["icona"], c["colore"], "piccolo")}{e(c["nome"])}</h3><div class="pillole">{pillole}</div></div>'
+    passi = [("Scegli il servizio", "Tocca il servizio che ti serve oppure descrivici il problema: ti indirizziamo noi.", "teal"),
+             ("Scrivici", "Da telefono si apre WhatsApp con la richiesta già scritta; da computer compili il modulo e arriva direttamente in azienda.", "blu"),
+             ("Sopralluogo gratuito", "Un nostro tecnico valuta gli ambienti e ti propone tempi, modalità e costi. Senza impegno.", "magenta")]
+    passi_html = "".join(f'<article class="passo reveal r{i+1}"><span class="numero" style="background:var(--{col})">{i+1}</span><h3>{e(t)}</h3><p>{e(d)}</p></article>' for i, (t, d, col) in enumerate(passi))
+    loghi = "".join(f'<img src="assets/clienti/{f}.png" alt="{e(n)}" loading="lazy">' for f, n in CLIENTI)
+    corpo = f"""
+<header class="testata-lp">
+  <div class="contenitore">
+    <span class="marchio"><img src="assets/logo/logo-orizzontale.png" alt="So.Ge.Pa. Facility Management" width="1200" height="245"></span>
+    {btn_tel("btn-secondario btn-piccolo")}
+  </div>
+</header>
+
+<section class="hero-lp" aria-labelledby="lp-titolo">
+  <div class="sfondo">{pic("hero-home", "", [640,1000,1600], "100vw", priority=True)}</div>
+  <div class="contenitore">
+    <div>
+      <p class="etichetta">Impresa di pulizie · Catania e provincia</p>
+      <h1 id="lp-titolo">Pulizie, sanificazioni e disinfestazioni a Catania. Sopralluogo e preventivo gratuiti.</h1>
+      <p class="sotto">Oltre 35 anni di esperienza, personale formato, certificazioni ISO 45001 e ISO 14001. Scrivici: ti rispondiamo dal numero aziendale e fissiamo il sopralluogo senza impegno.</p>
+      <div class="azioni">{cta("Richiedi il preventivo gratuito", extra="btn-grande")}{btn_tel("btn-contorno-chiaro btn-grande")}</div>
+      <ul class="prove">
+        <li><span class="hexdot teal"></span>Oltre 35 anni di attività</li>
+        <li><span class="hexdot blu"></span>5,0 su Google · 129 recensioni</li>
+        <li><span class="hexdot magenta"></span>ISO 45001 · ISO 14001</li>
+      </ul>
+    </div>
+    <div class="modulo solo-desktop" id="richiesta">
+      <h2 id="lp-mod-titolo">Richiedi il preventivo gratuito</h2>
+      <p class="intro-modulo">Compila in un minuto: ti ricontattiamo per fissare il sopralluogo.</p>
+      {modulo("lp", in_pagina=True, origine="Landing ads")}
+    </div>
+  </div>
+</section>
+
+<section class="fiducia" aria-label="Perché sceglierci">
+  <div class="contenitore"><ul>
+    <li><span class="hexdot"></span>Sopralluogo e preventivo gratuiti</li>
+    <li><span class="hexdot teal"></span>Interventi in tutta la Sicilia</li>
+    <li><span class="hexdot blu"></span>Personale formato</li>
+    <li><span class="hexdot magenta"></span>Prodotti certificati e a basso impatto</li>
+  </ul></div>
+</section>
+
+<section class="sezione" aria-labelledby="scelta-titolo">
+  <div class="contenitore">
+    <div class="intesta reveal"><p class="etichetta">Di cosa hai bisogno?</p><h2 id="scelta-titolo">Scegli il servizio e scrivici</h2><p class="sotto">Tocca il servizio: da telefono si apre WhatsApp con la richiesta già scritta, da computer si compila il modulo.</p></div>
+    <div class="scelta">{colonne}</div>
+  </div>
+</section>
+
+<section class="sezione tinta" aria-labelledby="come-titolo">
+  <div class="contenitore">
+    <div class="intesta reveal"><p class="etichetta">Come funziona</p><h2 id="come-titolo">Tre passaggi, nessuna complicazione</h2></div>
+    <div class="passi">{passi_html}</div>
+  </div>
+</section>
+
+{sezione_recensioni().replace('class="sezione tinta"', 'class="sezione"')}
+
+<section class="sezione tinta" aria-label="Aziende che hanno scelto So.Ge.Pa.">
+  <div class="contenitore">
+    <p class="titolo-loghi">Hanno scelto So.Ge.Pa.</p>
+    <div class="loghi-lp">{loghi}</div>
+  </div>
+</section>
+
+{banda_cta("Pronto per il sopralluogo gratuito?", "Scrivici ora: ti rispondiamo dal numero aziendale e fissiamo il sopralluogo senza impegno.")}
+
+<footer class="pie-lp">
+  <div class="contenitore">
+    <span>© {ANNO} {e(AZIENDA["ragione_sociale"])} · {e(AZIENDA["indirizzo"])}, {AZIENDA["cap"]} {e(AZIENDA["citta"])} ({AZIENDA["provincia"]}) · P. IVA {AZIENDA["piva"]}</span>
+    <span><a href="mailto:{AZIENDA["email"]}">{AZIENDA["email"]}</a> · <a href="privacy.html">Privacy</a> · <a href="cookie.html">Cookie</a></span>
+  </div>
+</footer>
+<a class="wa-flottante" href="https://wa.me/{AZIENDA["whatsapp"]}" data-wa aria-label="Scrivici su WhatsApp">{ico("wa")}</a>"""
+    return documento("preventivo.html", "Preventivo gratuito pulizie e disinfestazioni a Catania | So.Ge.Pa.",
+                     "Sopralluogo e preventivo gratuiti per pulizie, sanificazioni, trattamenti pavimenti e disinfestazioni a Catania e in Sicilia. Scrivici su WhatsApp o compila il modulo.",
+                     corpo, con_modale=False, noindex=True, nudo=True,
+                     intro_wa="Ciao So.Ge.Pa., ho visto la vostra inserzione e vorrei")
+
 # ---------------------------------------------------------------- scrittura
 PAGINE = {
     "index.html": pagina_home,
@@ -790,6 +885,7 @@ PAGINE = {
     "cookie.html": lambda: pagina_testo("cookie.html", "Informativa sui cookie | So.Ge.Pa.", "Quali cookie e servizi di terze parti utilizza il sito So.Ge.Pa.", "Informativa sui cookie", COOKIE),
     "grazie.html": pagina_grazie,
     "404.html": pagina_404,
+    "preventivo.html": pagina_landing,   # landing ads: non linkata, noindex, fuori sitemap
 }
 
 def main():
