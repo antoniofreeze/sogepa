@@ -10,7 +10,7 @@ import os, json, datetime, html as H
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://antoniofreeze.github.io/sogepa"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
-VERSIONE = "4"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
+VERSIONE = "5"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()
 
 AZIENDA = {
@@ -787,80 +787,148 @@ def pagina_404():
     return documento("404.html", "Pagina non trovata | So.Ge.Pa.", "La pagina richiesta non esiste.", corpo, con_modale=False)
 
 
+def modulo_compatto(prefisso="lp", origine="Landing ads"):
+    """Modulo a tre campi per la landing (nome, telefono, servizio) + note facoltative."""
+    p = prefisso
+    return f'''
+<form class="richiesta" action="{ACTION_MODULO}" method="POST" novalidate="" aria-labelledby="{p}-mod-titolo">
+  <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <input type="hidden" name="_next" value="{BASE}/grazie.html">
+  <input type="hidden" name="_subject" value="Richiesta dal sito So.Ge.Pa.">
+  <input type="hidden" name="origine" value="{e(origine)}">
+  <div class="campi">
+    <div class="campo"><label for="{p}-nome">Nome e cognome *</label><input id="{p}-nome" name="nome" required autocomplete="name"></div>
+    <div class="campo"><label for="{p}-tel">Telefono *</label><input id="{p}-tel" type="tel" name="telefono" required autocomplete="tel" inputmode="tel"></div>
+    <div class="campo"><label for="{p}-servizio">Servizio richiesto *</label><select id="{p}-servizio" name="servizio" required>{opzioni_servizi()}</select></div>
+    <div class="campo"><label for="{p}-msg">Note (facoltative)</label><textarea id="{p}-msg" name="messaggio" placeholder="Es. uffici di 200 mq, intervento entro il mese"></textarea></div>
+    <div class="campo consenso"><input type="checkbox" id="{p}-privacy" name="privacy" value="accettata" required><label for="{p}-privacy">Accetto l’<a href="privacy.html">informativa sulla privacy</a> per essere ricontattato. *</label></div>
+    <div class="campo">
+      <button class="btn btn-primario btn-grande" type="submit" style="width:100%">{ico("mail")}<span>Richiedi il preventivo gratuito</span></button>
+      <p class="nota">Gratis e senza impegno. Ti ricontattiamo per fissare il sopralluogo.</p>
+    </div>
+  </div>
+  <div class="esito" role="status" aria-live="polite"></div>
+</form>'''
+
 def pagina_landing():
-    """Landing per le campagne ads: non linkata dal sito, noindex, fuori dalla sitemap."""
-    colonne = ""
+    """Landing per le campagne ads: non linkata dal sito, noindex, fuori dalla sitemap. Mobile-first."""
+    chev = f'<svg {_S} class="chev"><path d="m6 9 6 6 6-6"/></svg>'
+    gruppi = ""
     for c in CATEGORIE:
         pillole = "".join(f'<a class="pillola" href="#richiesta" data-cta data-servizio="{e(n)}">{ico("check")}{e(n)}</a>' for n, _, _ in c["servizi"])
-        colonne += f'<div class="scelta-col reveal">{"<h3>"}{hexicon(c["icona"], c["colore"], "piccolo")}{e(c["nome"])}</h3><div class="pillole">{pillole}</div></div>'
-    passi = [("Scegli il servizio", "Tocca il servizio che ti serve oppure descrivici il problema: ti indirizziamo noi.", "teal"),
-             ("Scrivici", "Da telefono si apre WhatsApp con la richiesta già scritta; da computer compili il modulo e arriva direttamente in azienda.", "blu"),
-             ("Sopralluogo gratuito", "Un nostro tecnico valuta gli ambienti e ti propone tempi, modalità e costi. Senza impegno.", "magenta")]
+        gruppi += f'<details class="gruppo"><summary>{hexicon(c["icona"], c["colore"], "piccolo")}<span>{e(c["nome"])}</span><span class="conteggio">{len(c["servizi"])} servizi</span>{chev}</summary><div class="pillole">{pillole}</div></details>'
+    passi = [("Scegli il servizio", "Tocca quello che ti serve, o descrivici il problema.", "teal"),
+             ("Scrivici", "Da telefono su WhatsApp, da computer con il modulo. Rispondiamo dal numero aziendale.", "blu"),
+             ("Sopralluogo gratuito", "Un tecnico valuta gli spazi e ti propone tempi, modalità e costi. Senza impegno.", "magenta")]
     passi_html = "".join(f'<article class="passo reveal r{i+1}"><span class="numero" style="background:var(--{col})">{i+1}</span><h3>{e(t)}</h3><p>{e(d)}</p></article>' for i, (t, d, col) in enumerate(passi))
+    recensioni = "".join(f'<article class="recensione"><div class="stelle" aria-label="5 stelle su 5">★★★★★</div><blockquote>“{e(t)}”</blockquote><footer><span class="avatar" aria-hidden="true">{n[0]}</span>{e(n)}</footer></article>' for t, n in RECENSIONI)
     loghi = "".join(f'<img src="assets/clienti/{f}.png" alt="{e(n)}" loading="lazy">' for f, n in CLIENTI)
+    faq = [("Il sopralluogo costa qualcosa?", "No. Sopralluogo e consulenza sono gratuiti e senza impegno."),
+           ("In quali zone intervenite?", "A Catania e provincia e in tutta la Sicilia."),
+           ("Lavorate anche con i privati?", "Sì: privati, condomini, aziende, negozi, enti e strutture ricettive."),
+           ("Che prodotti usate?", "Prodotti certificati e specifici per ogni superficie, a basso impatto per l’ambiente e per la salute."),
+           ("Come ricevo il preventivo?", "Dopo il sopralluogo ti proponiamo tempi, modalità e costi. Decidi tu se procedere.")]
+    faq_html = "".join(f'<details><summary>{e(q)}{chev}</summary><p>{e(a)}</p></details>' for q, a in faq)
+    foto_hero = pic("hero-home", "Operatrice So.Ge.Pa. al lavoro nel corridoio di un ufficio", [640, 1000], "(min-width:900px) 45vw, 100vw", priority=True)
+    foto = f'<div class="foto-lp">{foto_hero}<div class="badge-flottante">{hexicon("check", "menta", "piccolo")}<span>Sopralluogo gratuito<small>Senza impegno, in tutta la Sicilia</small></span></div></div>'
+    foto_team = pic("team-uniforme", "Divisa So.Ge.Pa. con il logo sulla manica", [640, 1000], "(min-width:900px) 40vw, 100vw", cls="foto-tonda")
     corpo = f"""
 <header class="testata-lp">
   <div class="contenitore">
     <span class="marchio"><img src="assets/logo/logo-orizzontale.png" alt="So.Ge.Pa. Facility Management" width="1200" height="245"></span>
-    {btn_tel("btn-secondario btn-piccolo")}
+    <a class="btn btn-secondario btn-piccolo" href="tel:{AZIENDA["tel_fisso_link"]}">{ico("tel")}<span>Chiama<span class="numero"> {AZIENDA["tel_fisso"]}</span></span></a>
   </div>
 </header>
 
 <section class="hero-lp" aria-labelledby="lp-titolo">
-  <div class="sfondo">{pic("hero-home", "", [640,1000,1600], "100vw", priority=True)}</div>
+  <span class="deco-hex deco-a" aria-hidden="true"></span><span class="deco-hex deco-b" aria-hidden="true"></span>
   <div class="contenitore">
     <div>
       <p class="etichetta">Impresa di pulizie · Catania e provincia</p>
-      <h1 id="lp-titolo">Pulizie, sanificazioni e disinfestazioni a Catania. Sopralluogo e preventivo gratuiti.</h1>
-      <p class="sotto">Oltre 35 anni di esperienza, personale formato, certificazioni ISO 45001 e ISO 14001. Scrivici: ti rispondiamo dal numero aziendale e fissiamo il sopralluogo senza impegno.</p>
-      <div class="azioni">{cta("Richiedi il preventivo gratuito", extra="btn-grande")}{btn_tel("btn-contorno-chiaro btn-grande")}</div>
-      <ul class="prove">
-        <li><span class="hexdot teal"></span>Oltre 35 anni di attività</li>
-        <li><span class="hexdot blu"></span>5,0 su Google · 129 recensioni</li>
-        <li><span class="hexdot magenta"></span>ISO 45001 · ISO 14001</li>
+      <h1 id="lp-titolo">Pulizie e disinfestazioni a Catania</h1>
+      <p class="promessa">Sopralluogo e preventivo gratuiti.</p>
+      <p class="sotto">Da oltre 35 anni al fianco di aziende, condomini e privati. Scrivici e fissiamo il sopralluogo.</p>
+      <div class="azioni" data-sentinella>{cta("Richiedi il preventivo gratuito", extra="btn-grande")}</div>
+      <p class="micro">{ico("check")} Rispondiamo dal numero aziendale · senza impegno</p>
+      <ul class="fiducia-inline">
+        <li><span class="stelle" aria-hidden="true">★★★★★</span>5,0 su Google · 129 recensioni</li>
+        <li><span class="hexdot teal"></span>Oltre 35 anni di esperienza</li>
       </ul>
+      <div class="solo-mobile">{foto}</div>
     </div>
-    <div class="modulo solo-desktop" id="richiesta">
+    <div class="modulo compatto solo-desktop" id="richiesta">
       <h2 id="lp-mod-titolo">Richiedi il preventivo gratuito</h2>
-      <p class="intro-modulo">Compila in un minuto: ti ricontattiamo per fissare il sopralluogo.</p>
-      {modulo("lp", in_pagina=True, origine="Landing ads")}
+      <p class="intro-modulo">Tre campi, un minuto. Ti ricontattiamo per il sopralluogo.</p>
+      {modulo_compatto("lp", "Landing ads")}
     </div>
   </div>
 </section>
 
 <section class="fiducia" aria-label="Perché sceglierci">
   <div class="contenitore"><ul>
-    <li><span class="hexdot"></span>Sopralluogo e preventivo gratuiti</li>
-    <li><span class="hexdot teal"></span>Interventi in tutta la Sicilia</li>
+    <li><span class="hexdot"></span>Sopralluogo gratuito</li>
+    <li><span class="hexdot teal"></span>Tutta la Sicilia</li>
     <li><span class="hexdot blu"></span>Personale formato</li>
-    <li><span class="hexdot magenta"></span>Prodotti certificati e a basso impatto</li>
+    <li><span class="hexdot magenta"></span>ISO 45001 · 14001</li>
   </ul></div>
 </section>
 
-<section class="sezione" aria-labelledby="scelta-titolo">
+<section class="sezione" aria-labelledby="scelta-titolo" style="padding-block:clamp(2.5rem,6vw,5rem)">
   <div class="contenitore">
-    <div class="intesta reveal"><p class="etichetta">Di cosa hai bisogno?</p><h2 id="scelta-titolo">Scegli il servizio e scrivici</h2><p class="sotto">Tocca il servizio: da telefono si apre WhatsApp con la richiesta già scritta, da computer si compila il modulo.</p></div>
-    <div class="scelta">{colonne}</div>
+    <div class="intesta reveal"><p class="etichetta">Di cosa hai bisogno?</p><h2 id="scelta-titolo">Scegli il servizio e scrivici</h2><p class="sotto">Tocca un servizio: si apre WhatsApp con la richiesta già scritta. Da computer si compila il modulo.</p></div>
+    <div class="gruppi">{gruppi}</div>
   </div>
 </section>
 
-<section class="sezione tinta" aria-labelledby="come-titolo">
+<section class="sezione tinta" aria-labelledby="perche-titolo" style="padding-block:clamp(2.5rem,6vw,5rem)">
+  <div class="contenitore">
+    <div class="perche">
+      <div class="solo-desktop">{foto_team}</div>
+      <div class="reveal">
+        <p class="etichetta">Perché So.Ge.Pa.</p>
+        <h2 id="perche-titolo">Esperienza, sicurezza, rispetto degli ambienti</h2>
+        <ul class="lista-check">
+          <li>{ico("check")}<span><strong>Oltre 35 anni di esperienza</strong> e squadre formate per ogni tipo di ambiente.</span></li>
+          <li>{ico("check")}<span><strong>Sicurezza certificata ISO 45001</strong>: procedure controllate per lavoratori e clienti.</span></li>
+          <li>{ico("check")}<span><strong>Prodotti certificati a basso impatto</strong>, gestione ambientale ISO 14001.</span></li>
+          <li>{ico("check")}<span><strong>Sopralluogo gratuito e preventivo chiaro</strong>, senza impegno.</span></li>
+        </ul>
+        <div class="azioni" style="margin:1.4rem 0 0">{cta("Richiedi il preventivo gratuito", cls="btn-primario")}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" aria-labelledby="come-titolo" style="padding-block:clamp(2.5rem,6vw,5rem)">
   <div class="contenitore">
     <div class="intesta reveal"><p class="etichetta">Come funziona</p><h2 id="come-titolo">Tre passaggi, nessuna complicazione</h2></div>
     <div class="passi">{passi_html}</div>
   </div>
 </section>
 
-{sezione_recensioni().replace('class="sezione tinta"', 'class="sezione"')}
-
-<section class="sezione tinta" aria-label="Aziende che hanno scelto So.Ge.Pa.">
+<section class="sezione tinta" aria-labelledby="rec-titolo" style="padding-block:clamp(2.5rem,6vw,5rem)">
   <div class="contenitore">
-    <p class="titolo-loghi">Hanno scelto So.Ge.Pa.</p>
+    <div class="testa-recensioni reveal">
+      <div class="intesta"><p class="etichetta">Dicono di noi</p><h2 id="rec-titolo">Una reputazione immacolata</h2></div>
+      {google_pill()}
+    </div>
+    <div class="carosello">{recensioni}</div>
+    <p class="titolo-loghi" style="margin-top:2.6rem">Hanno scelto So.Ge.Pa.</p>
     <div class="loghi-lp">{loghi}</div>
   </div>
 </section>
 
-{banda_cta("Pronto per il sopralluogo gratuito?", "Scrivici ora: ti rispondiamo dal numero aziendale e fissiamo il sopralluogo senza impegno.")}
+<section class="sezione" aria-labelledby="faq-titolo" style="padding-block:clamp(2.5rem,6vw,5rem)">
+  <div class="contenitore">
+    <div class="intesta reveal"><p class="etichetta">Domande frequenti</p><h2 id="faq-titolo">Prima di scriverci</h2></div>
+    <div class="faq">{faq_html}</div>
+    <div class="cta-finale mt-3 reveal">
+      <span class="deco-hex" aria-hidden="true"></span>
+      <div><h2>Pronto per il sopralluogo gratuito?</h2><p>Scrivici ora: rispondiamo dal numero aziendale e fissiamo il sopralluogo senza impegno.</p></div>
+      <div class="azioni">{cta("Richiedi il preventivo gratuito", cls="btn-primario")}{btn_tel("btn-contorno-chiaro")}</div>
+    </div>
+  </div>
+</section>
 
 <footer class="pie-lp">
   <div class="contenitore">
@@ -868,7 +936,7 @@ def pagina_landing():
     <span><a href="mailto:{AZIENDA["email"]}">{AZIENDA["email"]}</a> · <a href="privacy.html">Privacy</a> · <a href="cookie.html">Cookie</a></span>
   </div>
 </footer>
-<a class="wa-flottante" href="https://wa.me/{AZIENDA["whatsapp"]}" data-wa aria-label="Scrivici su WhatsApp">{ico("wa")}</a>"""
+<div class="barra-fissa" role="region" aria-label="Contatti rapidi">{btn_wa("Scrivici su WhatsApp")}{btn_tel("btn-secondario", "Chiama")}</div>"""
     return documento("preventivo.html", "Preventivo gratuito pulizie e disinfestazioni a Catania | So.Ge.Pa.",
                      "Sopralluogo e preventivo gratuiti per pulizie, sanificazioni, trattamenti pavimenti e disinfestazioni a Catania e in Sicilia. Scrivici su WhatsApp o compila il modulo.",
                      corpo, con_modale=False, noindex=True, nudo=True,

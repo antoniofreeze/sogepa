@@ -231,6 +231,19 @@
     });
   });
 
+  /* Landing: barra fissa mobile (compare quando la CTA del hero esce dallo schermo) e gruppi aperti da PC */
+  var barra = document.querySelector('.barra-fissa');
+  var sentinella = document.querySelector('[data-sentinella]');
+  if (barra) {
+    document.body.classList.add('con-barra');
+    if (sentinella && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (v) { barra.classList.toggle('mostra', !v[0].isIntersecting); }, { threshold: 0 }).observe(sentinella);
+    } else { barra.classList.add('mostra'); }
+  }
+  if (!mobile && window.matchMedia && matchMedia('(min-width:900px)').matches) {
+    Array.prototype.forEach.call(document.querySelectorAll('details.gruppo'), function (d) { d.open = true; });
+  }
+
   /* Lightbox rassegna stampa */
   var luce = document.getElementById('luce');
   if (luce) {
