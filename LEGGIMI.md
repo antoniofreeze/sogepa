@@ -29,8 +29,11 @@ Alternativa: Formspree (come freezestudio) → cambiare `ENDPOINT_MODULO`/`ACTIO
 - Verifica: Google Tag Assistant (tagassistant.google.com) o Google Ads → Conversioni → stato dopo il primo click.
 - Landing `preventivo.html`: non linkata, `noindex`, WhatsApp con testo "ho visto la vostra inserzione", campo nascosto `origine` con gli UTM (con Google Ads: tagging automatico gclid attivo e `?utm_source=google&utm_medium=cpc&utm_campaign=…`), oggetto mail con prefisso [Ads]. Barra fissa WhatsApp/Chiama su mobile.
 
+## URL pulite
+Il sito usa URL senza estensione (`/servizi`, `/contatti`, `/preventivo`): GitHub Pages serve `servizi.html` quando si chiede `/servizi`. La build (`pulisci_html`) riscrive tutti i link interni e gli asset in forma assoluta (`/assets/...`); i vecchi link con `.html` continuano a rispondere e hanno il canonical sulla versione pulita.
+
 ## Anteprima locale
-`python3 -m http.server 4231 --directory <cartella>` (macOS: servire una copia fuori da Downloads se il server non legge la cartella).
+`python3 anteprima.py 4231 <cartella>` (server che imita GitHub Pages: URL senza estensione e 404.html; macOS: servire una copia fuori da Downloads se non legge la cartella).
 Nel desktop Claude: entry `sogepa` in `Downloads/.claude/launch.json` (porta 4231, serve la copia in scratchpad: risincronizzare con rsync dopo le modifiche).
 
 ## Pubblicazione (GitHub Pages, come gli altri siti Freeze)

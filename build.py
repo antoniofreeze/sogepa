@@ -10,7 +10,7 @@ import os, json, datetime, html as H
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://www.sogepasnc.com"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
-VERSIONE = "6"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
+VERSIONE = "7"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()
 
 AZIENDA = {
@@ -156,6 +156,19 @@ def ico(n): return ICONE[n]
 # ---------------------------------------------------------------- helper html
 def e(s): return H.escape(s, quote=True)
 
+import re as _re
+def url_pulita(p):
+    """'servizi.html#pulizie' -> '/servizi#pulizie'; 'index.html' -> '/'. GitHub Pages serve le pagine senza estensione."""
+    base, _, frag = p.partition("#")
+    if base in ("index.html", ""): base = "/"
+    elif base.endswith(".html"): base = "/" + base[:-5]
+    return base + ("#" + frag if frag else "")
+
+def pulisci_html(html):
+    html = _re.sub(r'(href|action)="([a-z0-9-]+\.html(?:#[^"]*)?)"', lambda m: f'{m.group(1)}="{url_pulita(m.group(2))}"', html)
+    html = html.replace('"assets/', '"/assets/').replace(', assets/', ', /assets/')
+    return html
+
 def _dim(nome, w):
     """Dimensioni reali dei file (per width/height e srcset)."""
     try:
@@ -283,7 +296,7 @@ def modulo(prefisso="m", in_pagina=False, origine=None):
     return f'''
 <form class="richiesta" action="{ACTION_MODULO}" method="POST" novalidate="" aria-labelledby="{p}-titolo">
   <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
-  <input type="hidden" name="_next" value="{BASE}/grazie.html">
+  <input type="hidden" name="_next" value="{BASE}/grazie">
   <input type="hidden" name="_subject" value="Richiesta dal sito So.Ge.Pa.">
   {f'<input type="hidden" name="origine" value="{e(origine)}">' if origine else ""}
   <div class="campi">
@@ -352,7 +365,7 @@ def sezione_recensioni():
 </section>'''
 
 def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, og_img="assets/img/hero-home-1600.jpg", tipo="website", noindex=False, nudo=False, intro_wa=None):
-    canon = f"{BASE}/" if pagina == "index.html" else f"{BASE}/{pagina}"
+    canon = BASE + url_pulita(pagina)
     ld = f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>' if jsonld else ""
     cfg_d = {"whatsapp": AZIENDA["whatsapp"], "email": AZIENDA["email"], "endpoint": ENDPOINT_MODULO}
     if intro_wa: cfg_d["introWa"] = intro_wa
@@ -366,7 +379,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
     robots = '<meta name="robots" content="noindex, nofollow">' if noindex else ""
     testa = '<a class="skip" href="#contenuto">Vai al contenuto</a>' if nudo else testata(pagina)
     piede = "" if nudo else pie()
-    return f'''<!DOCTYPE html>
+    html_out = f'''<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8">
@@ -405,6 +418,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 <script src="assets/js/sito.js?v={VERSIONE}" defer></script>
 </body>
 </html>'''
+    return pulisci_html(html_out)
 
 JSONLD_AZIENDA = {
     "@context": "https://schema.org", "@type": "LocalBusiness", "@id": f"{BASE}/#azienda",
@@ -806,7 +820,7 @@ def modulo_compatto(prefisso="lp", origine="Landing ads"):
     return f'''
 <form class="richiesta" action="{ACTION_MODULO}" method="POST" novalidate="" aria-labelledby="{p}-mod-titolo">
   <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
-  <input type="hidden" name="_next" value="{BASE}/grazie.html">
+  <input type="hidden" name="_next" value="{BASE}/grazie">
   <input type="hidden" name="_subject" value="Richiesta dal sito So.Ge.Pa.">
   <input type="hidden" name="origine" value="{e(origine)}">
   <div class="campi">
@@ -965,7 +979,7 @@ REINDIRIZZI.update({f"service-page/{x}": "servizi.html#trattamenti" for x in _TR
 REINDIRIZZI.update({f"service-page/{x}": "servizi.html#disinfestazioni" for x in _DIS})
 
 def stub_reindirizzo(dest):
-    url = f"{BASE}/{dest}" if dest != "index.html" else f"{BASE}/"
+    url = BASE + url_pulita(dest)
     canon = url.split("#")[0]
     return f'''<!DOCTYPE html>
 <html lang="it"><head><meta charset="utf-8"><title>Pagina spostata | So.Ge.Pa.</title>
@@ -993,11 +1007,11 @@ def main():
             f.write(fn())
         print("scritto", nome)
     pubbliche = ["index.html", "servizi.html", "chi-siamo.html", "parlano-di-noi.html", "contatti.html", "privacy.html", "cookie.html"]
-    urls = "".join(f"<url><loc>{BASE}/{'' if p=='index.html' else p}</loc><lastmod>{OGGI}</lastmod></url>" for p in pubbliche)
+    urls = "".join(f"<url><loc>{BASE}{url_pulita(p)}</loc><lastmod>{OGGI}</lastmod></url>" for p in pubbliche)
     with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>')
     with open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8") as f:
-        f.write(f"User-agent: *\nAllow: /\nDisallow: /grazie.html\nSitemap: {BASE}/sitemap.xml\n")
+        f.write(f"User-agent: *\nAllow: /\nDisallow: /grazie\nSitemap: {BASE}/sitemap.xml\n")
     open(os.path.join(ROOT, ".nojekyll"), "w").close()
     for vecchio, dest in REINDIRIZZI.items():
         percorso = os.path.join(ROOT, vecchio + ".html")

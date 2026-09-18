@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /grazie.html
+Disallow: /grazie
 Sitemap: https://www.sogepasnc.com/sitemap.xml
