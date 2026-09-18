@@ -10,7 +10,7 @@ import os, json, datetime, html as H
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = "https://antoniofreeze.github.io/sogepa"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
-VERSIONE = "5"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
+VERSIONE = "6"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()
 
 AZIENDA = {
@@ -31,6 +31,9 @@ AZIENDA = {
     "google_maps": "https://www.google.com/maps/search/?api=1&query=So.Ge.Pa.+San+Giovanni+La+Punta",
     "mappa_embed": "https://www.google.com/maps?q=Via+Roma+17,+95037+San+Giovanni+La+Punta+CT&output=embed",
 }
+GOOGLE_TAG_ID = ""   # ← ID conversione Google Ads (es. "AW-1234567890"). Vuoto = niente tag Google né banner cookie.
+GA4_ID = ""          # ← facoltativo: ID Google Analytics 4 (es. "G-XXXXXXXXXX")
+GOOGLE_ADS_ETICHETTE = {"lead_modulo": "", "contatto_whatsapp": "", "chiamata": ""}   # etichette delle azioni di conversione create in Google Ads
 ENDPOINT_MODULO = "https://formsubmit.co/ajax/" + AZIENDA["email"]
 ACTION_MODULO = "https://formsubmit.co/" + AZIENDA["email"]
 
@@ -256,6 +259,7 @@ def pie():
           <li>P. IVA {AZIENDA["piva"]}</li>
           <li><a href="privacy.html">Informativa sulla privacy</a></li>
           <li><a href="cookie.html">Informativa sui cookie</a></li>
+          {'<li><a href="#" data-gestisci-cookie>Gestisci cookie</a></li>' if GOOGLE_TAG_ID else ''}
         </ul>
       </div>
     </div>
@@ -352,6 +356,12 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
     ld = f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>' if jsonld else ""
     cfg_d = {"whatsapp": AZIENDA["whatsapp"], "email": AZIENDA["email"], "endpoint": ENDPOINT_MODULO}
     if intro_wa: cfg_d["introWa"] = intro_wa
+    if GOOGLE_TAG_ID: cfg_d["google"] = {"id": GOOGLE_TAG_ID, "ga4": GA4_ID, "etichette": {k: v for k, v in GOOGLE_ADS_ETICHETTE.items() if v}}
+    banner = f'''
+<div class="consenso-banner" id="consenso-banner" role="dialog" aria-label="Preferenze cookie" hidden>
+  <p><strong>Cookie e misurazione</strong>Usiamo Google Ads e Google Analytics per capire quali campagne portano richieste. I cookie si attivano solo se accetti: puoi cambiare idea dal link «Gestisci cookie» in fondo alla pagina. <a href="cookie.html">Informativa sui cookie</a></p>
+  <div class="azioni-consenso"><button class="btn btn-secondario btn-piccolo" type="button" data-consenso="no">Rifiuta</button><button class="btn btn-primario btn-piccolo" type="button" data-consenso="si">Accetta</button></div>
+</div>''' if GOOGLE_TAG_ID else ""
     cfg = json.dumps(cfg_d, ensure_ascii=False)
     robots = '<meta name="robots" content="noindex, nofollow">' if noindex else ""
     testa = '<a class="skip" href="#contenuto">Vai al contenuto</a>' if nudo else testata(pagina)
@@ -391,6 +401,7 @@ def documento(pagina, titolo, descrizione, corpo, con_modale=True, jsonld=None, 
 </main>
 {piede}
 {modale() if con_modale else ""}
+{banner}
 <script src="assets/js/sito.js?v={VERSIONE}" defer></script>
 </body>
 </html>'''
@@ -735,6 +746,7 @@ PRIVACY = f'''
 <li>Il modulo del sito è inviato tramite il servizio <a href="https://formsubmit.co" target="_blank" rel="noopener">FormSubmit</a>, che recapita il messaggio alla nostra casella email e agisce come fornitore tecnico.</li>
 <li>Il sito è pubblicato su un servizio di hosting di terze parti che tratta i dati tecnici di navigazione.</li>
 <li>La mappa della sede si carica solo su tua richiesta e utilizza servizi Google (vedi <a href="cookie.html">informativa sui cookie</a>).</li>
+{'<li>Se acconsenti tramite il banner, Google Ireland Ltd (Google Ads e Google Analytics) riceve dati di navigazione ed eventi (visita, contatto, invio modulo) per misurare le campagne: base giuridica il consenso (art. 6, par. 1, lett. a), revocabile in ogni momento.</li>' if GOOGLE_TAG_ID else ''}
 </ul>
 <p>Alcuni fornitori possono avere sede fuori dall’Unione europea: in tal caso il trasferimento avviene sulla base di decisioni di adeguatezza o di garanzie appropriate ai sensi degli artt. 44 e seguenti del GDPR. I dati non sono comunicati ad altri soggetti né diffusi.</p>
 <h2>I tuoi diritti</h2>
@@ -746,16 +758,17 @@ PRIVACY = f'''
 
 COOKIE = f'''
 <p><em>Ultimo aggiornamento: {datetime.date.today().strftime("%d/%m/%Y")}</em></p>
-<div class="avviso"><p><strong>In breve:</strong> questo sito non utilizza cookie di profilazione né strumenti di analisi statistica. Nessun cookie viene impostato durante la navigazione, salvo quanto descritto qui sotto per la mappa di Google, che si carica solo su tua richiesta.</p></div>
+{'<div class="avviso"><p><strong>In breve:</strong> il sito non imposta cookie finché non scegli nel banner. Se accetti, si attivano i cookie di Google Ads e Google Analytics per misurare le visite e le richieste che arrivano dalle nostre campagne; se rifiuti, Google riceve solo segnali anonimi senza cookie (Consent Mode) e la mappa si carica solo su tua richiesta.</p></div>' if GOOGLE_TAG_ID else '<div class="avviso"><p><strong>In breve:</strong> questo sito non utilizza cookie di profilazione né strumenti di analisi statistica. Nessun cookie viene impostato durante la navigazione, salvo quanto descritto qui sotto per la mappa di Google, che si carica solo su tua richiesta.</p></div>'}
 <h2>Cosa sono i cookie</h2>
 <p>I cookie sono piccoli file di testo che i siti inviano al dispositivo dell’utente, dove vengono memorizzati per essere ritrasmessi alla visita successiva. Possono essere tecnici (necessari al funzionamento) oppure di profilazione (usati per tracciare l’utente e proporre pubblicità mirata).</p>
 <h2>Cookie utilizzati da questo sito</h2>
 <ul>
 <li><strong>Cookie tecnici propri:</strong> nessuno. Il sito è composto da pagine statiche e non richiede autenticazione.</li>
-<li><strong>Cookie di analisi o profilazione:</strong> nessuno.</li>
+<li><strong>Cookie di analisi o profilazione:</strong> {'solo Google Ads e Google Analytics, descritti sotto, e solo dopo il tuo consenso.' if GOOGLE_TAG_ID else 'nessuno.'}</li>
 </ul>
 <h2>Servizi di terze parti</h2>
 <ul>
+{'<li><strong>Google Ads e Google Analytics 4</strong>: si attivano solo se clicchi «Accetta» nel banner. Servono a misurare le visite e le richieste (contatto WhatsApp, telefonata, modulo) che arrivano dalle nostre campagne e a mostrare le inserzioni a chi ha già visitato il sito. Cookie: <code>_gcl_au</code> (90 giorni), <code>_ga</code> e <code>_ga_*</code> (fino a 2 anni). Prima del consenso il tag Google invia solo segnali anonimi senza cookie (Google Consent Mode). I dati sono trattati da Google Ireland Ltd secondo la sua <a href="https://policies.google.com/privacy?hl=it" target="_blank" rel="noopener">informativa sulla privacy</a> e le <a href="https://policies.google.com/technologies/partner-sites?hl=it" target="_blank" rel="noopener">modalità di utilizzo dei dati</a>. Puoi revocare il consenso in qualsiasi momento dal link «Gestisci cookie» in fondo alla pagina.</li>' if GOOGLE_TAG_ID else ''}
 <li><strong>Google Maps</strong>: nella pagina Contatti la mappa della sede viene caricata soltanto dopo il click sul pulsante «Mostra la mappa». Da quel momento Google può impostare cookie e trattare dati secondo la propria <a href="https://policies.google.com/privacy?hl=it" target="_blank" rel="noopener">informativa sulla privacy</a>.</li>
 <li><strong>Google Fonts</strong>: i caratteri tipografici sono caricati dai server di Google; il browser trasmette a Google i dati tecnici necessari (tra cui l’indirizzo IP). Google dichiara di non utilizzare cookie per questo servizio.</li>
 <li><strong>WhatsApp</strong>: i pulsanti WhatsApp sono semplici link; nessun dato viene trasmesso finché non decidi di aprire la conversazione.</li>
@@ -933,7 +946,7 @@ def pagina_landing():
 <footer class="pie-lp">
   <div class="contenitore">
     <span>© {ANNO} {e(AZIENDA["ragione_sociale"])} · {e(AZIENDA["indirizzo"])}, {AZIENDA["cap"]} {e(AZIENDA["citta"])} ({AZIENDA["provincia"]}) · P. IVA {AZIENDA["piva"]}</span>
-    <span><a href="mailto:{AZIENDA["email"]}">{AZIENDA["email"]}</a> · <a href="privacy.html">Privacy</a> · <a href="cookie.html">Cookie</a></span>
+    <span><a href="mailto:{AZIENDA["email"]}">{AZIENDA["email"]}</a> · <a href="privacy.html">Privacy</a> · <a href="cookie.html">Cookie</a>{' · <a href="#" data-gestisci-cookie>Gestisci cookie</a>' if GOOGLE_TAG_ID else ''}</span>
   </div>
 </footer>
 <div class="barra-fissa" role="region" aria-label="Contatti rapidi">{btn_wa("Scrivici su WhatsApp")}{btn_tel("btn-secondario", "Chiama")}</div>"""

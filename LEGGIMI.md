@@ -22,6 +22,13 @@ Il modulo invia a `https://formsubmit.co/ajax/sogepasnc@libero.it`.
 Se l'invio fallisce, il sito mostra un link "invia via email" (mailto) e il telefono.
 Alternativa: Formspree (come freezestudio) → cambiare `ENDPOINT_MODULO`/`ACTION_MODULO` in build.py.
 
+## Tag Google (misurazione delle campagne Google Ads)
+- In build.py: `GOOGLE_TAG_ID` = ID conversione Google Ads (formato `AW-1234567890`, da Google Ads → Obiettivi → Conversioni → Riepilogo → "Configurazione tag"); `GA4_ID` facoltativo (`G-…`); `GOOGLE_ADS_ETICHETTE` = etichette delle 3 azioni di conversione create in Google Ads (Sito web, configurazione manuale): `lead_modulo`, `contatto_whatsapp`, `chiamata`. Vuoto = niente tag né banner.
+- Con l'ID impostato la build attiva: Consent Mode v2 (tutto "denied" di default, solo segnali anonimi senza cookie), banner Accetta/Rifiuta (scelta in localStorage `sogepa-consenso`), link "Gestisci cookie" nel footer, sezioni Google nelle informative cookie e privacy.
+- Eventi: `contatto_whatsapp` (click WhatsApp), `chiamata` (click sui numeri), `lead_modulo` (modulo inviato). Ogni evento è anche un evento GA4; se c'è l'etichetta, viene inviata la conversione Google Ads `AW-…/ETICHETTA`.
+- Verifica: Google Tag Assistant (tagassistant.google.com) o Google Ads → Conversioni → stato dopo il primo click.
+- Landing `preventivo.html`: non linkata, `noindex`, WhatsApp con testo "ho visto la vostra inserzione", campo nascosto `origine` con gli UTM (con Google Ads: tagging automatico gclid attivo e `?utm_source=google&utm_medium=cpc&utm_campaign=…`), oggetto mail con prefisso [Ads]. Barra fissa WhatsApp/Chiama su mobile.
+
 ## Anteprima locale
 `python3 -m http.server 4231 --directory <cartella>` (macOS: servire una copia fuori da Downloads se il server non legge la cartella).
 Nel desktop Claude: entry `sogepa` in `Downloads/.claude/launch.json` (porta 4231, serve la copia in scratchpad: risincronizzare con rsync dopo le modifiche).

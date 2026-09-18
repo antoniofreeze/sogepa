@@ -510,3 +510,13 @@ html.is-mobile .barra-fissa{display:flex}
 html.is-mobile .barra-fissa.mostra{transform:none}
 .barra-fissa .btn{flex:1;padding:.85rem .5rem;font-size:.95rem}
 html.is-mobile body.con-barra{padding-bottom:90px}
+
+/* Banner consenso cookie (compare solo se il pixel Meta è configurato) --- */
+.consenso-banner{position:fixed;left:16px;right:16px;bottom:16px;z-index:200;background:#fff;border:1px solid var(--linea);border-radius:var(--r);box-shadow:var(--ombra-2);padding:1.1rem 1.2rem;max-width:560px;margin-inline:auto}
+.consenso-banner[hidden]{display:none}
+.consenso-banner p{margin:0 0 .9rem;font-size:.93rem;color:var(--ink-2)}
+.consenso-banner strong{color:var(--navy);display:block;margin-bottom:.2rem;font-family:var(--font-display)}
+.consenso-banner a{color:var(--verde);font-weight:600}
+.azioni-consenso{display:flex;gap:.6rem;justify-content:flex-end;flex-wrap:wrap}
+html.is-mobile .consenso-banner{bottom:calc(16px + env(safe-area-inset-bottom))}
+html.is-mobile body.con-barra .consenso-banner{bottom:calc(96px + env(safe-area-inset-bottom))}

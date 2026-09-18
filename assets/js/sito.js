@@ -10,7 +10,17 @@
   var EMAIL = CFG.email || 'sogepasnc@libero.it';
   var ENDPOINT = CFG.endpoint || ('https://formsubmit.co/ajax/' + EMAIL);
   var INTRO = CFG.introWa || 'Ciao So.Ge.Pa., vorrei';
-  function pixel(evento) { if (typeof window.fbq === 'function') { try { window.fbq('track', evento); } catch (e) {} } }
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { window.dataLayer.push(arguments); }
+  var GOOGLE = CFG.google || null;
+  function traccia(nome) {
+    if (!GOOGLE || !GOOGLE.id) return;
+    try {
+      gtag('event', nome, { event_category: 'contatto' });
+      var et = GOOGLE.etichette && GOOGLE.etichette[nome];
+      if (et && /^AW-/.test(GOOGLE.id)) gtag('event', 'conversion', { send_to: GOOGLE.id + '/' + et });
+    } catch (e) {}
+  }
 
   /* Dispositivo: da telefono/tablet si va su WhatsApp, da PC si apre il modulo */
   var mobile = (function () {
@@ -33,7 +43,7 @@
     a.setAttribute('href', linkWhatsApp(a.getAttribute('data-servizio') || ''));
     a.setAttribute('target', '_blank');
     a.setAttribute('rel', 'noopener');
-    a.addEventListener('click', function () { pixel('Contact'); });
+    a.addEventListener('click', function () { traccia('contatto_whatsapp'); });
   });
 
   /* Origine della richiesta (UTM delle campagne) nel campo nascosto "origine" */
@@ -44,6 +54,41 @@
   });
   Array.prototype.forEach.call(document.querySelectorAll('input[name="origine"]'), function (i) {
     if (utm.length) i.value = (i.value || 'Sito') + ' · ' + utm.join(' ');
+  });
+
+  /* Consenso cookie + Google tag (Consent Mode v2): prima del consenso nessun cookie, solo segnali anonimi */
+  var CHIAVE_CONSENSO = 'sogepa-consenso';
+  function leggiConsenso() { try { return localStorage.getItem(CHIAVE_CONSENSO); } catch (e) { return null; } }
+  function salvaConsenso(v) { try { localStorage.setItem(CHIAVE_CONSENSO, v); } catch (e) {} }
+  function concediConsenso() { gtag('consent', 'update', { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted' }); }
+  var bannerConsenso = document.getElementById('consenso-banner');
+  function mostraBanner() { if (bannerConsenso) bannerConsenso.hidden = false; }
+  function nascondiBanner() { if (bannerConsenso) bannerConsenso.hidden = true; }
+  if (GOOGLE && GOOGLE.id) {
+    gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', wait_for_update: 500 });
+    var tagScript = document.createElement('script');
+    tagScript.async = true;
+    tagScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GOOGLE.id);
+    document.head.appendChild(tagScript);
+    gtag('js', new Date());
+    gtag('config', GOOGLE.id);
+    if (GOOGLE.ga4) gtag('config', GOOGLE.ga4);
+    var scelta = leggiConsenso();
+    if (scelta === 'si') concediConsenso(); else if (scelta !== 'no') mostraBanner();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-consenso]'), function (b) {
+      b.addEventListener('click', function () {
+        var v = b.getAttribute('data-consenso');
+        salvaConsenso(v); nascondiBanner();
+        if (v === 'si') concediConsenso();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-gestisci-cookie]'), function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); mostraBanner(); });
+    });
+  }
+  /* Telefonate dai link tel: contano come conversione "chiamata" */
+  Array.prototype.forEach.call(document.querySelectorAll('a[href^="tel:"]'), function (a) {
+    a.addEventListener('click', function () { traccia('chiamata'); });
   });
 
   /* Modulo: preselezione servizio, apertura modale o scroll al modulo in pagina */
@@ -86,7 +131,7 @@
       var tm = el.getAttribute('data-testo-mobile');
       var span = el.querySelector('.testo');
       if (tm && span) span.textContent = tm;
-      el.addEventListener('click', function () { pixel('Contact'); });
+      el.addEventListener('click', function () { traccia('contatto_whatsapp'); });
     } else {
       el.setAttribute('href', el.getAttribute('data-href') || '#richiesta');
       el.addEventListener('click', function (e) {
@@ -129,7 +174,7 @@
           esito.className = 'esito ok';
           esito.innerHTML = '<strong>Richiesta inviata, grazie.</strong> Ti ricontattiamo al più presto per il sopralluogo gratuito. Se hai urgenza chiama il <a href="tel:+39095525642">095 525642</a>.';
           esito.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          pixel('Lead');
+          traccia('lead_modulo');
         } else {
           throw new Error(res.j && res.j.message ? res.j.message : 'Invio non riuscito');
         }
