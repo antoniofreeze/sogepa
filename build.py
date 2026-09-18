@@ -8,7 +8,7 @@ Tutti i contenuti (testi, servizi, recapiti) vivono qui: modifica e rilancia.
 import os, json, datetime, html as H
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-BASE = "https://antoniofreeze.github.io/sogepa"   # ← cambiare quando il sito va sul dominio definitivo
+BASE = "https://www.sogepasnc.com"   # ← cambiare quando il sito va sul dominio definitivo
 ANNO = datetime.date.today().year
 VERSIONE = "6"   # ← aumentare a ogni modifica di CSS o JS (evita la cache dei browser)
 OGGI = datetime.date.today().isoformat()

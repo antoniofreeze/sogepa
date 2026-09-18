@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /grazie.html
-Sitemap: https://antoniofreeze.github.io/sogepa/sitemap.xml
+Sitemap: https://www.sogepasnc.com/sitemap.xml
