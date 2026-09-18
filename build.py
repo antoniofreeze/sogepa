@@ -955,6 +955,24 @@ def pagina_landing():
                      corpo, con_modale=False, noindex=True, nudo=True,
                      intro_wa="Ciao So.Ge.Pa., ho visto la vostra inserzione e vorrei")
 
+# ---------------------------------------------------------------- reindirizzamenti dalle vecchie URL Wix
+_PUL = ["pulizie-speciali-per-ambienti-sensibili","pulizia-pannelli-fotovoltaici","pulizia-post-cantiere","pulizia-e-decalcificazione-vetri-e-vetra","ripristino-pavimentazione","pulizie-piscine","pulizia-grondaie","shampoo-rinnovente-moquette"]
+_TRA = ["ceratura-e-deceratura-pavimenti","trattamento-antiscivolo","vetrificazione-permanente-superfici","rimozione-graffiti","trattamento-pavimenti-in-pvc-e-linoleum","levigatura-pavimenti","trattamento-cotto-e-pietre-naturali","lucidatura-e-sigillatura-pavimenti"]
+_DIS = ["sanificazione-e-disinfezione-ambientale","disinfestazione-caditoie-e-fognature","controllo-infestanti-per-locali-food","sanificazioni-ambientali","allontanamento-colombi","disinfestazione-termiti","disinfestazione-e-deblattizzazione","disinfestazione-cimici-dei-letti","derattizzazione"]
+REINDIRIZZI = {"prenota-online": "servizi.html", "sogepa": "index.html", "informativa-sulla-privacy": "privacy.html", "informativa-sui-cookie": "cookie.html"}
+REINDIRIZZI.update({f"service-page/{x}": "servizi.html#pulizie" for x in _PUL})
+REINDIRIZZI.update({f"service-page/{x}": "servizi.html#trattamenti" for x in _TRA})
+REINDIRIZZI.update({f"service-page/{x}": "servizi.html#disinfestazioni" for x in _DIS})
+
+def stub_reindirizzo(dest):
+    url = f"{BASE}/{dest}" if dest != "index.html" else f"{BASE}/"
+    canon = url.split("#")[0]
+    return f'''<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><title>Pagina spostata | So.Ge.Pa.</title>
+<meta http-equiv="refresh" content="0; url={url}"><link rel="canonical" href="{canon}"><meta name="robots" content="noindex">
+<script>location.replace({json.dumps(url)});</script></head>
+<body style="font-family:system-ui;padding:2rem"><p>Questa pagina si è spostata: <a href="{url}">continua su sogepasnc</a>.</p></body></html>'''
+
 # ---------------------------------------------------------------- scrittura
 PAGINE = {
     "index.html": pagina_home,
@@ -981,7 +999,12 @@ def main():
     with open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(f"User-agent: *\nAllow: /\nDisallow: /grazie.html\nSitemap: {BASE}/sitemap.xml\n")
     open(os.path.join(ROOT, ".nojekyll"), "w").close()
-    print("scritti sitemap.xml, robots.txt, .nojekyll")
+    for vecchio, dest in REINDIRIZZI.items():
+        percorso = os.path.join(ROOT, vecchio + ".html")
+        os.makedirs(os.path.dirname(percorso), exist_ok=True)
+        with open(percorso, "w", encoding="utf-8") as f:
+            f.write(stub_reindirizzo(dest))
+    print(f"scritti sitemap.xml, robots.txt, .nojekyll e {len(REINDIRIZZI)} reindirizzamenti dalle vecchie URL Wix")
 
 if __name__ == "__main__":
     main()
